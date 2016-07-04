@@ -1,0 +1,14 @@
+{
+  "name": "lambda-exif-autoorient",
+  "version": "1.0.0",
+  "description": "automatically orient images if necessary when written to s3",
+  "main": "index.js",
+  "scripts": {
+  },
+  "author": "Kyle Thomas",
+  "license": "MIT",
+  "dependencies": {
+    "async": "^0.9.0",
+    "gm": "^1.3.22"
+  }
+}
