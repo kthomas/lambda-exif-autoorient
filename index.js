@@ -40,10 +40,7 @@ exports.handler = function(event, context) {
 	}
 
 	fileType = typeMatch[1].toLowerCase();
-	if (fileType != 'jpg' && fileType != 'png') {
-		console.log('Skipping non-image ' + srcKey);
-		return;
-	}
+	var isImage = fileType == 'jpg' || fileType == 'png';
 
 	// Download the image from S3, transform, and overwrite if changes were made
 	async.waterfall([
@@ -67,6 +64,41 @@ exports.handler = function(event, context) {
 
 						queueEvent = metadata['sqs-queue-event'];
 						queueUrl = metadata['sqs-queue-url'];
+
+						if (!isImage) {
+							if (queueUrl && (srcKey != dstKey || queueEvent)) {
+								var sqsPayload = {
+									event: queueEvent || 's3_object_version_added',
+									payload: {
+										original_key: srcKey,
+										version_key: dstKey,
+										url: 'https://s3.amazonaws.com/' + dstBucket + '/' + dstKey,
+										metadata: metadata
+									}
+								};
+
+								var json = JSON.stringify(sqsPayload);
+								console.log('Sending message to SQS: ' + json);
+
+								sqs.sendMessage({
+									MessageBody: json,
+									QueueUrl: queueUrl
+								}, function(err, data) {
+									if (err) {
+										console.error(err);
+										next(err);
+									} else {
+										console.error('SQS write successful');
+										next(null);
+									}
+								});
+							} else {
+								console.error('SQS write skipped');
+							}
+
+							console.log('Skipping non-image: ' + srcKey);
+							return;
+						}
 					}
 
 					next(err, response);
